@@ -1,0 +1,837 @@
+```python
+import pandas as pd
+from lbl2vec import Lbl2Vec
+from gensim.utils import simple_preprocess
+from gensim.models.doc2vec import Doc2Vec, TaggedDocument
+from gensim.parsing.preprocessing import strip_tags
+from sklearn.metrics import f1_score
+```
+
+
+```python
+drawings = pd.read_csv(r"C:\Users\gramos1\OneDrive - Reworld\DrawingNames.csv",sep=',',header=0, names = ['DrawingName'])
+labels = pd.read_csv(r"C:\Users\gramos1\OneDrive - Reworld\drawinglabels.csv", sep=',')
+labels = labels.rename(columns={"Unnamed: 0": "Category"})
+labels['keywords'] = labels['keywords'].apply(lambda x: x.split())
+labels['keywords'] = labels['keywords'].apply(lambda description_keywords : [keyword.lower() for keyword in description_keywords])
+labels['number_of_keywords'] = labels['keywords'].apply(lambda row: len(row))
+```
+
+
+```python
+#Before tokenizing, I want to get rid of the alphanumerical code at the beginning of the title,
+#how it should work is if "-" is present, being an indicator for an A.N code, it will omit up to that, removing the code ( the numerical part is already
+#omitted during the tokenization), if it's not present itll leave it alone
+drawings['DrawingName'] = drawings['DrawingName'].apply(lambda x: x.split('-', 1)[1] if "-" in x else x)
+#Yay! i did it I got rid of the fluff in the titles
+```
+
+
+```python
+def tokenize(doc): # convert document into list of lowercase tokens
+    #Need to also make it so that the first token gets 
+    return simple_preprocess(strip_tags(doc),min_len = 1,max_len =50)
+```
+
+
+```python
+drawings['tagged_docs'] = drawings.apply(lambda row: TaggedDocument(tokenize(row['DrawingName']), [str(row.name)]), axis=1)
+```
+
+
+```python
+drawings
+```
+
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>DrawingName</th>
+      <th>tagged_docs</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0200 - INSTRMNTN &amp; CONTROL DIAGS. SYMB. &amp; LEGE...</td>
+      <td>([instrmntn, control, diags, symb, legend, ind...</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0201 - MAIN &amp; DUMP STM SYS. INSTRMNTN &amp; CTL DI...</td>
+      <td>([main, dump, stm, sys, instrmntn, ctl, diags,...</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0202 - EXT. STM &amp; AUX. STM SYS. INSTRN &amp; CTL D...</td>
+      <td>([ext, stm, aux, stm, sys, instrn, ctl, diags,...</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>0203 - FEEDWATER SYS. INSTRMTN &amp; CTL DIAGS IND...</td>
+      <td>([feedwater, sys, instrmtn, ctl, diags, index,...</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>0204 - CONDS &amp; MKE - UP WATER SYS. INSTR &amp; CTL...</td>
+      <td>([conds, mke, up, water, sys, instr, ctl, diag...</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>5160</th>
+      <td>24-C-12143 - FAIL-SAFE CROSSOVER VALVE.TIF</td>
+      <td>([c, fail, safe, crossover, valve, tif], [5160])</td>
+    </tr>
+    <tr>
+      <th>5161</th>
+      <td>24-C-6552 - 138kv SWITCH YARD .TIF</td>
+      <td>([c, kv, switch, yard, tif], [5161])</td>
+    </tr>
+    <tr>
+      <th>5162</th>
+      <td>24-S-15066-4 - PIPE-TYPE CAABLE SYS. TYPICAL T...</td>
+      <td>([s, pipe, type, caable, sys, typical, termina...</td>
+    </tr>
+    <tr>
+      <th>5163</th>
+      <td>REAR LATERAL GRATE TERMINATION .TIF</td>
+      <td>([rear, lateral, grate, termination, tif], [51...</td>
+    </tr>
+    <tr>
+      <th>5164</th>
+      <td>INSTRUCTION MANUAL TYPE 75A WATER REGULATOR.TIF</td>
+      <td>([instruction, manual, type, a, water, regulat...</td>
+    </tr>
+  </tbody>
+</table>
+<p>5165 rows × 2 columns</p>
+</div>
+
+
+
+
+```python
+lbl2vec_model = Lbl2Vec(keywords_list = list(labels['keywords']),
+                        tagged_documents=drawings['tagged_docs'],
+                        label_names = list(labels['Categories']),
+                        epochs = 15,
+                        min_count = 1,
+                        similarity_threshold = 0.50,
+                        min_num_docs=1,
+                        verbose = True,
+                       )
+```
+
+
+```python
+lbl2vec_model.fit()
+```
+
+    2026-07-06 11:23:27,702 - Lbl2Vec - INFO - Train document and word embeddings
+    2026-07-06 11:23:38,858 - Lbl2Vec - INFO - Train label embeddings
+    
+
+
+```python
+model_docs_lbl_similarities = lbl2vec_model.predict_model_docs()
+```
+
+    2026-07-06 11:23:51,426 - Lbl2Vec - INFO - Get document embeddings from model
+    2026-07-06 11:23:51,453 - Lbl2Vec - INFO - Calculate document<->label similarities
+    
+
+
+```python
+drawings.head(20)
+```
+
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>DrawingName</th>
+      <th>tagged_docs</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>INSTRMNTN &amp; CONTROL DIAGS. SYMB. &amp; LEGEND IND...</td>
+      <td>([instrmntn, control, diags, symb, legend, ind...</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>MAIN &amp; DUMP STM SYS. INSTRMNTN &amp; CTL DIAGS. I...</td>
+      <td>([main, dump, stm, sys, instrmntn, ctl, diags,...</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>EXT. STM &amp; AUX. STM SYS. INSTRN &amp; CTL DIAGS. ...</td>
+      <td>([ext, stm, aux, stm, sys, instrn, ctl, diags,...</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>FEEDWATER SYS. INSTRMTN &amp; CTL DIAGS INDEX (SH...</td>
+      <td>([feedwater, sys, instrmtn, ctl, diags, index,...</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>CONDS &amp; MKE - UP WATER SYS. INSTR &amp; CTL DIAG ...</td>
+      <td>([conds, mke, up, water, sys, instr, ctl, diag...</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>CLSD LOOP COOLING H20 SYS INSTR &amp; CTL DIAGS I...</td>
+      <td>([clsd, loop, cooling, h, sys, instr, ctl, dia...</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>FUEL OIL &amp; EMGCY DIESEL GE. SYS INSTR &amp; CTL D...</td>
+      <td>([fuel, oil, emgcy, diesel, ge, sys, instr, ct...</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>INSTR. &amp; PLANT AIR SYS. INSTRMNTN &amp; CTL DIAGS...</td>
+      <td>([instr, plant, air, sys, instrmntn, ctl, diag...</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>HTR VENTS &amp; DRAINS SYS. INSTRMTN &amp; CTL DIAG. ...</td>
+      <td>([htr, vents, drains, sys, instrmtn, ctl, diag...</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>MAIN TURB L - OIL &amp; CO2 SYS INSTRMNTN &amp;CTL DI...</td>
+      <td>([main, turb, l, oil, co, sys, instrmntn, ctl,...</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>BLR BLOWDWM &amp; DRAINS SYS INSTRMNTN &amp; CTL DIAG...</td>
+      <td>([blr, blowdwm, drains, sys, instrmntn, ctl, d...</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>TURB DRAINS,MISC. DRAINS &amp;VTS SYS INSTR &amp; CTL...</td>
+      <td>([turb, drains, misc, drains, vts, sys, instr,...</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>RAW,DEMIN. &amp; WASTE H20 SYS INSTRMNTN &amp; CTL DI...</td>
+      <td>([raw, demin, waste, h, sys, instrmntn, ctl, d...</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>INSTR. INSTAL. DETAIL - GEN. NOTES (SH 00).TIF</td>
+      <td>([instr, instal, detail, gen, notes, sh, tif],...</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>INSTR. INSTAL-BILL OF MAT. (SH 01&amp; 02).TIF</td>
+      <td>([instr, instal, bill, of, mat, sh, tif], [14])</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>INSTRUMENT INSTALLATION DETAIL (SH 01 - 10)  ...</td>
+      <td>([instrument, installation, detail, sh, tif], ...</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>INST. INSTL. DETAIL - (SH 01 -13)            ...</td>
+      <td>([inst, instl, detail, sh, tif], [16])</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>INSTRUMENT INSTALLATION DETAIL (SH 01 -13).TIF</td>
+      <td>([instrument, installation, detail, sh, tif], ...</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>INSTRUMENT INSTALLATION DETAIL (SH 01-06).TIF</td>
+      <td>([instrument, installation, detail, sh, tif], ...</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>STANDARD THERMOWELLS (SH 1-6).TIF</td>
+      <td>([standard, thermowells, sh, tif], [19])</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+
+
+
+```python
+model_docs_lbl_similarities.head(20)
+```
+
+
+
+
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>doc_key</th>
+      <th>most_similar_label</th>
+      <th>highest_similarity_score</th>
+      <th>Generator</th>
+      <th>Electrical Distribution</th>
+      <th>Condensate System</th>
+      <th>Feed Water</th>
+      <th>Water Treatment and Sampling</th>
+      <th>Lime Slurry Preparation</th>
+      <th>Auxilary Water</th>
+      <th>...</th>
+      <th>Digital Control System</th>
+      <th>DENOX</th>
+      <th>Carbon Injection</th>
+      <th>Boiler-Furnace Combustion</th>
+      <th>Fuel Oil</th>
+      <th>Scrubber</th>
+      <th>CEMS/Baghouse</th>
+      <th>Boiler and Steam Generator</th>
+      <th>Main/Aux Steam</th>
+      <th>Main Turbine</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0</td>
+      <td>Water Treatment and Sampling</td>
+      <td>0.977428</td>
+      <td>0.972996</td>
+      <td>0.973982</td>
+      <td>0.975778</td>
+      <td>0.971918</td>
+      <td>0.977428</td>
+      <td>0.973813</td>
+      <td>0.971182</td>
+      <td>...</td>
+      <td>0.973476</td>
+      <td>0.972742</td>
+      <td>0.975215</td>
+      <td>0.973702</td>
+      <td>0.971592</td>
+      <td>0.975040</td>
+      <td>0.974778</td>
+      <td>0.975711</td>
+      <td>0.974837</td>
+      <td>0.974037</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1</td>
+      <td>Ash Removal</td>
+      <td>0.936591</td>
+      <td>0.933590</td>
+      <td>0.932093</td>
+      <td>0.929232</td>
+      <td>0.935155</td>
+      <td>0.926380</td>
+      <td>0.932362</td>
+      <td>0.936201</td>
+      <td>...</td>
+      <td>0.932870</td>
+      <td>0.933968</td>
+      <td>0.930154</td>
+      <td>0.932532</td>
+      <td>0.935622</td>
+      <td>0.930433</td>
+      <td>0.930853</td>
+      <td>0.929341</td>
+      <td>0.930756</td>
+      <td>0.932010</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2</td>
+      <td>Ash Removal</td>
+      <td>0.899671</td>
+      <td>0.895405</td>
+      <td>0.893295</td>
+      <td>0.889277</td>
+      <td>0.897627</td>
+      <td>0.885329</td>
+      <td>0.893664</td>
+      <td>0.899102</td>
+      <td>...</td>
+      <td>0.894387</td>
+      <td>0.895936</td>
+      <td>0.890563</td>
+      <td>0.893905</td>
+      <td>0.898286</td>
+      <td>0.890961</td>
+      <td>0.891550</td>
+      <td>0.889430</td>
+      <td>0.891415</td>
+      <td>0.893177</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>3</td>
+      <td>Water Treatment and Sampling</td>
+      <td>0.959547</td>
+      <td>0.953285</td>
+      <td>0.954657</td>
+      <td>0.957184</td>
+      <td>0.951797</td>
+      <td>0.959547</td>
+      <td>0.954417</td>
+      <td>0.950783</td>
+      <td>...</td>
+      <td>0.953949</td>
+      <td>0.952934</td>
+      <td>0.956388</td>
+      <td>0.954260</td>
+      <td>0.951347</td>
+      <td>0.956140</td>
+      <td>0.955768</td>
+      <td>0.957090</td>
+      <td>0.955855</td>
+      <td>0.954732</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>4</td>
+      <td>Ash Removal</td>
+      <td>0.871131</td>
+      <td>0.866217</td>
+      <td>0.863802</td>
+      <td>0.859189</td>
+      <td>0.868773</td>
+      <td>0.854665</td>
+      <td>0.864229</td>
+      <td>0.870479</td>
+      <td>...</td>
+      <td>0.865054</td>
+      <td>0.866831</td>
+      <td>0.860663</td>
+      <td>0.864502</td>
+      <td>0.869534</td>
+      <td>0.861121</td>
+      <td>0.861801</td>
+      <td>0.859365</td>
+      <td>0.861642</td>
+      <td>0.863670</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>5</td>
+      <td>Ash Removal</td>
+      <td>0.819944</td>
+      <td>0.814190</td>
+      <td>0.811359</td>
+      <td>0.805997</td>
+      <td>0.817179</td>
+      <td>0.800749</td>
+      <td>0.811856</td>
+      <td>0.819175</td>
+      <td>...</td>
+      <td>0.812823</td>
+      <td>0.814902</td>
+      <td>0.807706</td>
+      <td>0.812177</td>
+      <td>0.818068</td>
+      <td>0.808237</td>
+      <td>0.809027</td>
+      <td>0.806200</td>
+      <td>0.808845</td>
+      <td>0.811203</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>6</td>
+      <td>Ash Removal</td>
+      <td>0.858359</td>
+      <td>0.853228</td>
+      <td>0.850698</td>
+      <td>0.845891</td>
+      <td>0.855894</td>
+      <td>0.841173</td>
+      <td>0.851144</td>
+      <td>0.857676</td>
+      <td>...</td>
+      <td>0.852008</td>
+      <td>0.853865</td>
+      <td>0.847430</td>
+      <td>0.851431</td>
+      <td>0.856688</td>
+      <td>0.847904</td>
+      <td>0.848612</td>
+      <td>0.846074</td>
+      <td>0.848449</td>
+      <td>0.850560</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>7</td>
+      <td>Ash Removal</td>
+      <td>0.831685</td>
+      <td>0.826895</td>
+      <td>0.824542</td>
+      <td>0.820048</td>
+      <td>0.829403</td>
+      <td>0.815630</td>
+      <td>0.824959</td>
+      <td>0.831058</td>
+      <td>...</td>
+      <td>0.825759</td>
+      <td>0.827504</td>
+      <td>0.821490</td>
+      <td>0.825228</td>
+      <td>0.830144</td>
+      <td>0.821935</td>
+      <td>0.822597</td>
+      <td>0.820220</td>
+      <td>0.822437</td>
+      <td>0.824416</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>8</td>
+      <td>Water Treatment and Sampling</td>
+      <td>0.942046</td>
+      <td>0.935628</td>
+      <td>0.937031</td>
+      <td>0.939634</td>
+      <td>0.934098</td>
+      <td>0.942046</td>
+      <td>0.936784</td>
+      <td>0.933052</td>
+      <td>...</td>
+      <td>0.936307</td>
+      <td>0.935260</td>
+      <td>0.938816</td>
+      <td>0.936626</td>
+      <td>0.933635</td>
+      <td>0.938561</td>
+      <td>0.938181</td>
+      <td>0.939535</td>
+      <td>0.938269</td>
+      <td>0.937108</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>9</td>
+      <td>Ash Removal</td>
+      <td>0.899628</td>
+      <td>0.896337</td>
+      <td>0.894706</td>
+      <td>0.891584</td>
+      <td>0.898062</td>
+      <td>0.888443</td>
+      <td>0.895001</td>
+      <td>0.899209</td>
+      <td>...</td>
+      <td>0.895551</td>
+      <td>0.896758</td>
+      <td>0.892592</td>
+      <td>0.895181</td>
+      <td>0.898573</td>
+      <td>0.892899</td>
+      <td>0.893365</td>
+      <td>0.891703</td>
+      <td>0.893252</td>
+      <td>0.894623</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>10</td>
+      <td>Water Treatment and Sampling</td>
+      <td>0.972392</td>
+      <td>0.967405</td>
+      <td>0.968514</td>
+      <td>0.970529</td>
+      <td>0.966204</td>
+      <td>0.972392</td>
+      <td>0.968323</td>
+      <td>0.965379</td>
+      <td>...</td>
+      <td>0.967943</td>
+      <td>0.967123</td>
+      <td>0.969898</td>
+      <td>0.968197</td>
+      <td>0.965838</td>
+      <td>0.969702</td>
+      <td>0.969404</td>
+      <td>0.970455</td>
+      <td>0.969472</td>
+      <td>0.968574</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>11</td>
+      <td>Water Treatment and Sampling</td>
+      <td>0.958038</td>
+      <td>0.951812</td>
+      <td>0.953176</td>
+      <td>0.955679</td>
+      <td>0.950334</td>
+      <td>0.958038</td>
+      <td>0.952935</td>
+      <td>0.949323</td>
+      <td>...</td>
+      <td>0.952472</td>
+      <td>0.951461</td>
+      <td>0.954888</td>
+      <td>0.952782</td>
+      <td>0.949883</td>
+      <td>0.954644</td>
+      <td>0.954275</td>
+      <td>0.955588</td>
+      <td>0.954361</td>
+      <td>0.953248</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>12</td>
+      <td>Ash Removal</td>
+      <td>0.838416</td>
+      <td>0.833292</td>
+      <td>0.830779</td>
+      <td>0.825982</td>
+      <td>0.835962</td>
+      <td>0.821249</td>
+      <td>0.831235</td>
+      <td>0.837747</td>
+      <td>...</td>
+      <td>0.832086</td>
+      <td>0.833938</td>
+      <td>0.827521</td>
+      <td>0.831515</td>
+      <td>0.836762</td>
+      <td>0.827994</td>
+      <td>0.828701</td>
+      <td>0.826163</td>
+      <td>0.828533</td>
+      <td>0.830644</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>13</td>
+      <td>Ash Removal</td>
+      <td>0.718125</td>
+      <td>0.712954</td>
+      <td>0.710412</td>
+      <td>0.705607</td>
+      <td>0.715626</td>
+      <td>0.700899</td>
+      <td>0.710863</td>
+      <td>0.717433</td>
+      <td>...</td>
+      <td>0.711717</td>
+      <td>0.713595</td>
+      <td>0.707126</td>
+      <td>0.711151</td>
+      <td>0.716419</td>
+      <td>0.707600</td>
+      <td>0.708315</td>
+      <td>0.705783</td>
+      <td>0.708148</td>
+      <td>0.710268</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>14</td>
+      <td>Water Treatment and Sampling</td>
+      <td>0.740382</td>
+      <td>0.732331</td>
+      <td>0.734072</td>
+      <td>0.737288</td>
+      <td>0.730471</td>
+      <td>0.740382</td>
+      <td>0.733767</td>
+      <td>0.729207</td>
+      <td>...</td>
+      <td>0.733172</td>
+      <td>0.731876</td>
+      <td>0.736286</td>
+      <td>0.733569</td>
+      <td>0.729909</td>
+      <td>0.735960</td>
+      <td>0.735477</td>
+      <td>0.737174</td>
+      <td>0.735601</td>
+      <td>0.734158</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>15</td>
+      <td>Water Treatment and Sampling</td>
+      <td>0.725820</td>
+      <td>0.724699</td>
+      <td>0.724986</td>
+      <td>0.725495</td>
+      <td>0.724385</td>
+      <td>0.725820</td>
+      <td>0.724955</td>
+      <td>0.724186</td>
+      <td>...</td>
+      <td>0.724849</td>
+      <td>0.724641</td>
+      <td>0.725336</td>
+      <td>0.724917</td>
+      <td>0.724297</td>
+      <td>0.725283</td>
+      <td>0.725211</td>
+      <td>0.725465</td>
+      <td>0.725233</td>
+      <td>0.725001</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>16</td>
+      <td>Ash Removal</td>
+      <td>0.706580</td>
+      <td>0.700451</td>
+      <td>0.697478</td>
+      <td>0.691748</td>
+      <td>0.703653</td>
+      <td>0.686075</td>
+      <td>0.698023</td>
+      <td>0.705795</td>
+      <td>...</td>
+      <td>0.699023</td>
+      <td>0.701233</td>
+      <td>0.693572</td>
+      <td>0.698353</td>
+      <td>0.704616</td>
+      <td>0.694141</td>
+      <td>0.694997</td>
+      <td>0.691963</td>
+      <td>0.694782</td>
+      <td>0.697322</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>17</td>
+      <td>Ash Removal</td>
+      <td>-0.114934</td>
+      <td>-0.115177</td>
+      <td>-0.115328</td>
+      <td>-0.115545</td>
+      <td>-0.115045</td>
+      <td>-0.115686</td>
+      <td>-0.115309</td>
+      <td>-0.114959</td>
+      <td>...</td>
+      <td>-0.115247</td>
+      <td>-0.115157</td>
+      <td>-0.115473</td>
+      <td>-0.115286</td>
+      <td>-0.114996</td>
+      <td>-0.115460</td>
+      <td>-0.115445</td>
+      <td>-0.115530</td>
+      <td>-0.115436</td>
+      <td>-0.115350</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>18</td>
+      <td>Water Treatment and Sampling</td>
+      <td>0.729737</td>
+      <td>0.728220</td>
+      <td>0.728607</td>
+      <td>0.729207</td>
+      <td>0.727821</td>
+      <td>0.729737</td>
+      <td>0.728543</td>
+      <td>0.727555</td>
+      <td>...</td>
+      <td>0.728403</td>
+      <td>0.728141</td>
+      <td>0.729016</td>
+      <td>0.728489</td>
+      <td>0.727703</td>
+      <td>0.728954</td>
+      <td>0.728854</td>
+      <td>0.729182</td>
+      <td>0.728872</td>
+      <td>0.728625</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>19</td>
+      <td>Ash Removal</td>
+      <td>0.860889</td>
+      <td>0.855870</td>
+      <td>0.853393</td>
+      <td>0.848693</td>
+      <td>0.858474</td>
+      <td>0.844092</td>
+      <td>0.853827</td>
+      <td>0.860219</td>
+      <td>...</td>
+      <td>0.854676</td>
+      <td>0.856488</td>
+      <td>0.850195</td>
+      <td>0.854109</td>
+      <td>0.859252</td>
+      <td>0.850661</td>
+      <td>0.851351</td>
+      <td>0.848872</td>
+      <td>0.851193</td>
+      <td>0.853254</td>
+    </tr>
+  </tbody>
+</table>
+<p>20 rows × 26 columns</p>
+</div>
+
+
