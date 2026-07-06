@@ -13,3 +13,5 @@ I came across Lbl2Vec, which seemed to be the perfect library for this project, 
 
 # Complications (As of right now)
 Whether it's due to poor keyword choice on my part, or maybe "word fluff" in the file names, as they have the format of "Title Code - Descriptive Title" and the title code ends up throwing it off (I kept the title code as it'd allow for those who use the spreadsheet to still be able to use it in the new system, call it a transition period), I've kind of run into a wall as the cosine similarity calculations are all really weird, and the assigned categories to the text entries are mostly incorrect. So I might ditch Lbl2Vec, as convenient as it is, and look into using sci-kit.
+<img width="1390" height="364" alt="image" src="https://github.com/user-attachments/assets/6ec50865-1634-40f7-96e6-d34b8d08b71e" />
+As you can see here, the numbers are either negative, super close to 1, or just a random number between 0 and 1 (the other two are more common, however)
