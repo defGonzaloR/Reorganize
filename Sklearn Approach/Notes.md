@@ -16,3 +16,6 @@ Now to just figure out where to move on from here!
 
 Now with my text now being able to be inputted into a model, I came across Logistic Regression, a classification model that that models how likely an input belongs to a class or category. This sounds like exactly what I need at the moment, as I'm going for a supervised approach with my already-made csv file of keywords.
 However what I didnt anticipate with supervised learning was needing to individually mark a bunch of drawings with categories, so I need to get on that.
+
+
+My most recent publishing of the code is pretty good, so far it only runs through 1034 of the entries, as thats how many i manually labelled. After the weekend, I want to come back and run the process through all 5000 entries! Id say im on track for success right now.
