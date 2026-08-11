@@ -9,9 +9,9 @@ I took a machine-learning based approach because 1) I didn't want to bore myself
 
 # The Process
 This was my first time programming in Python, but with C/C++ experience from class I didn't think itd be too hard. I tried not to rely on AI for any code writing, and simply used it as a means of navigation through the organization of this project and what topics were useful
-I came across Lbl2Vec, which seemed to be the perfect library for this project, as it generates embedded vectors of each text entry and compares them to manually defined keywords, then generates each entry's similiarities to each keyword vector
+I came across Lbl2Vec, which seemed to be the perfect library for this project, as it generates embedded vectors of each text entry and compares them to manually defined keywords, then generates each entry's similiarities to each keyword vector. This approach was generally unsuccessful, as the naming and labeling conventions didn't necessarily align with Lbl2Vec's library. My alternative was using Scikit-Learn, a popular library used for machine learning in python, and with pandas integration I was successful in reorganizing the files.
 
-# Complications (As of right now)
-Whether it's due to poor keyword choice on my part, or maybe "word fluff" in the file names, as they have the format of "Title Code - Descriptive Title" and the title code ends up throwing it off (I kept the title code as it'd allow for those who use the spreadsheet to still be able to use it in the new system, call it a transition period), I've kind of run into a wall as the cosine similarity calculations are all really weird, and the assigned categories to the text entries are mostly incorrect. So I might ditch Lbl2Vec, as convenient as it is, and look into using sci-kit.
-<img width="1390" height="364" alt="image" src="https://github.com/user-attachments/assets/6ec50865-1634-40f7-96e6-d34b8d08b71e" />
-As you can see here, the numbers are either negative, super close to 1, or just a random number between 0 and 1 (the other two are more common, however)
+# Reflection
+Through this project I learned to navigate and use the Scikit-learn and Pandas libraries, as well as basic data structures and python programming and I/O. With a ~92% success rate across the 5000+ files, I'd label this mostly a success, and hope to hear back from my team in the future with any feedback. I'm aware not every single file is in the proper place, as unique naming conventions, typos, and rare titles generally get in the way of a project involving mass text classification like this. 
+
+Attached to this directory is the scikit model as well as scripts to organize the files. Should this be replicated, any paths in the scripts would need to be changed out for whatever's appropriate for your project. This is far from perfect or expert programming but it's a project that has a physical impact, even if it's on such a scale as improving project workflow.
